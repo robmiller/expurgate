@@ -1,25 +1,130 @@
 <?php
 
+define('CACHE_DIR', dirname(__FILE__) . '/cache');
+
+// When you want to fetch an image and don't care where it comes from, use 
+// this. It'll fetch the image from the cache if it's cached, and from the 
+// remote server if not.
+function get_image($url) {
+	$checksum = calculate_checksum($url);
+
+	if ( is_cached($checksum) ) {
+		return get_image_from_cache($checksum);
+	}
+
+	fetch_image($url);
+
+	return get_image_from_cache($checksum);
+}
+
 // Calculates a checksum for a given URL; this checksum is used as a unique
 // identifier for this image -- when caching, for example.
 function calculate_checksum($url) {
+	$key = get_key();
 
+	return hash_hmac('sha256', $url, $key);
+}
+
+// Given a URL and a checksum, will return true if the checksum is the valid 
+// one for that URL.
+function validate_checksum($url, $checksum) {
+	$valid_checksum = calculate_checksum($url);
+
+	return $valid_checksum === $checksum;
+}
+
+// If a file called key.txt exists in the cache directory, its contents will
+// be used as a key when generating checksums.
+function get_key() {
+	$key_file = CACHE_DIR . '/key.txt';
+
+	if ( is_readable($key_file) ) {
+		return file_get_contents($key_file);
+	}
+
+	die("I can't find a key! I won't work without one.");
+}
+
+// Given a checksum, will return an absolute file path to the cache entry
+// with that checksum (whether or not it exists).
+function get_cache_filename($checksum) {
+	return CACHE_DIR . "/$checksum.txt";
+}
+
+// Checks whether a cached version of the image already exists.
+function is_cached($checksum) {
+	$cache_file = get_cache_filename($checksum);
+
+	$exists = file_exists($cache_file);
+	$is_readable = is_readable($cache_file);
+
+	return $exists && $is_readable;
 }
 
 // Reads a file from the store of cached images and outputs it to the browser,
 // sending the appropriate headers.
 function get_image_from_cache($checksum) {
+	$cache_file = get_cache_filename($checksum);
 
+	if ( !is_cached($checksum) ) {
+		error('Problem with cache image.');
+	}
+
+	$cache_entry = json_decode(file_get_contents($cache_file));
+
+	if ( empty($cache_entry->mime_type) || empty($cache_entry->image_data) ) {
+		error('Problem with cache image.');
+	}
+
+	$image_data = base64_decode($cache_entry->image_data);
+
+	header('Content-Type: ' . $cache_entry->mime_type);
+	echo $image_data;
+	die;
 }
 
 // Fetches a remote image and stores it in the cache.
 function fetch_image($url) {
+	if ( function_exists('curl_init') ) {
+		$c = curl_init();
 
+		curl_setopt($c, CURLOPT_URL, $url);
+		curl_setopt($c, CURLOPT_HEADER, 0);
+		curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($c, CURLOPT_FOLLOWLOCATION, true);
+		curl_setopt($c, CURLOPT_MAXREDIRS, 5);
+		curl_setopt($c, CURLOPT_TIMEOUT, 10);
+
+		$image_data = curl_exec($c);
+		$mime_type = curl_getinfo($c, CURLINFO_CONTENT_TYPE);
+
+		curl_close($c);
+	}
+
+	// TODO: fallback for non-cURL-enabled servers
+
+	if ( empty($mime_type) || !preg_match('/^image\//', $mime_type) ) {
+		error('Invalid image type.');
+	}
+
+	if ( empty($image_data) ) {
+		error('Invalid image content.');
+	}
+
+	$checksum = calculate_checksum($url);
+
+	cache_image($image_data, $mime_type, $checksum);
 }
 
 // Stores an image in the cache.
 function cache_image($image_data, $mime_type, $checksum) {
+	$cache_file = get_cache_filename($checksum);
 
+	$image_data = base64_encode($image_data);
+
+	$cache_entry = json_encode(compact('image_data', 'mime_type'));
+
+	return file_put_contents($cache_file, $cache_entry);
 }
 
 // Determines whether or not the cache needs purging -- if there are too many
@@ -33,3 +138,24 @@ function cache_is_full() {
 function purge_cache() {
 
 }
+
+function error($message) {
+	header('HTTP/1.0 404 Not Found');
+	header('Status: 404 Not Found');
+	die($message);
+}
+
+if ( empty($_GET['url']) || empty($_GET['checksum']) ) {
+	error('Could not find image.');
+}
+
+$url      = $_GET['url'];
+$checksum = $_GET['checksum'];
+
+$is_valid = validate_checksum($url, $checksum);
+
+if ( !$is_valid ) {
+	error('Could not find image.');
+}
+
+get_image($url);
