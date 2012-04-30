@@ -2,11 +2,26 @@
 
 define('CACHE_DIR', dirname(__FILE__) . '/cache');
 
-define('MAX_AGE', 3600 * 24 * 7);
-define('MAX_CACHE_SIZE', 100 * 1024 * 1024);
-define('MAX_CACHE_FILES', 1024);
+$config_file = dirname(__FILE__) . '/expurgate-config.php';
+if ( is_readable($config_file) ) {
+	include_once $config_file;
+}
 
-define('MAX_IMAGE_SIZE', 500 * 1024);
+if ( !defined('MAX_AGE') ) {
+	define('MAX_AGE', 3600 * 24 * 7);
+}
+
+if ( !defined('MAX_CACHE_SIZE') ) {
+	define('MAX_CACHE_SIZE', 100 * 1024 * 1024);
+}
+
+if ( !defined('MAX_CACHE_FILES') ) {
+	define('MAX_CACHE_FILES', 1024);
+}
+
+if ( !defined('MAX_IMAGE_SIZE') ) {
+	define('MAX_IMAGE_SIZE', 500 * 1024);
+}
 
 // When you want to fetch an image and don't care where it comes from, use 
 // this. It'll fetch the image from the cache if it's cached, and from the 
