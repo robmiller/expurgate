@@ -6,6 +6,8 @@ define('MAX_AGE', 3600 * 24 * 7);
 define('MAX_CACHE_SIZE', 100 * 1024 * 1024);
 define('MAX_CACHE_FILES', 1024);
 
+define('MAX_IMAGE_SIZE', 500 * 1024);
+
 // When you want to fetch an image and don't care where it comes from, use 
 // this. It'll fetch the image from the cache if it's cached, and from the 
 // remote server if not.
@@ -99,12 +101,18 @@ function fetch_image($url) {
 		curl_setopt($c, CURLOPT_TIMEOUT, 10);
 
 		$image_data = curl_exec($c);
-		$mime_type = curl_getinfo($c, CURLINFO_CONTENT_TYPE);
+		$mime_type  = curl_getinfo($c, CURLINFO_CONTENT_TYPE);
+
+		$image_size = curl_getinfo($c, CURLINFO_SIZE_DOWNLOAD);
 
 		curl_close($c);
 	}
 
 	// TODO: fallback for non-cURL-enabled servers
+
+	if ( $image_size > MAX_IMAGE_SIZE ) {
+		error('Image is too large.');
+	}
 
 	if ( empty($mime_type) || !preg_match('/^image\//', $mime_type) ) {
 		error('Invalid image type.');
