@@ -4,9 +4,13 @@ Running an SSL site? Don't want mixed content warnings? Expurgate lets you serve
 
 ## How it works
 
-Server-side, you route all your HTTP calls to images to an HTTPS call to expurgate, which might look like:
+On your HTTPS pages, instead of requesting an image over HTTP — which would throw up a mixed content warning in the user's browser — you change the link server-side so that it's passed through expurgate instead. So, instead of:
 
-	https://example.com/expurgate.php?checksum=foo&url=http://example.net/foo.jpg
+	<img src="http://example.net/foo.jpg">
+
+You'd request:
+
+	<img src="https://example.com/expurgate.php?checksum=foo&url=http://example.net/foo.jpg">
 
 Expurgate will then fetch http://example.net/foo.jpg and serve it over SSL — meaning that every request on your page is still encrypted, and your users see no mixed content warnings.
 
@@ -30,4 +34,4 @@ So, to generate the checksum in the above example, the calling code would look l
 
 ## Requirements
 
-PHP >5.2.0 with hash functions.
+PHP >= v5.3.0 with hash functions.
