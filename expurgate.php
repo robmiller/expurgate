@@ -159,7 +159,12 @@ function cache_is_full() {
 // Removes one image from the cache. This means that, when the cache is full,
 // we'll be adopting a one in, one out policy
 function purge_cache() {
+	$cache_files = get_cache_files();
 
+	// For now, select a file at random.
+	$to_delete = $cache_files[array_rand($cache_files)];
+
+	unlink(CACHE_DIR . '/' . $to_delete->filename);
 }
 
 // Removes expired entries from the cache.
