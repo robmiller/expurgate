@@ -48,7 +48,7 @@ function get_key() {
 // Given a checksum, will return an absolute file path to the cache entry
 // with that checksum (whether or not it exists).
 function get_cache_filename($checksum) {
-	return CACHE_DIR . "/$checksum.txt";
+	return CACHE_DIR . "/$checksum.cache.txt";
 }
 
 // Checks whether a cached version of the image already exists.
