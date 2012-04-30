@@ -4,6 +4,7 @@ define('CACHE_DIR', dirname(__FILE__) . '/cache');
 
 define('MAX_AGE', 3600 * 24 * 7);
 define('MAX_CACHE_SIZE', 100 * 1024 * 1024);
+define('MAX_CACHE_FILES', 1024);
 
 // When you want to fetch an image and don't care where it comes from, use 
 // this. It'll fetch the image from the cache if it's cached, and from the 
@@ -134,6 +135,12 @@ function cache_image($image_data, $mime_type, $checksum) {
 function cache_is_full() {
 	$cache_files = get_cache_files();
 
+	$too_many_files = ( count($cache_files) > MAX_CACHE_FILES );
+
+	if ( $too_many_files ) {
+		return true;
+	}
+
 	$cache_size = array_reduce(
 		$cache_files,
 		function($size, $cache) {
@@ -142,7 +149,11 @@ function cache_is_full() {
 		}
 	);
 
-	return ( $cache_size > MAX_CACHE_SIZE );
+	$too_big = ( $cache_size > MAX_CACHE_SIZE );
+
+	if ( $too_big ) {
+		return true;
+	}
 }
 
 // Removes one image from the cache. This means that, when the cache is full,
