@@ -116,14 +116,19 @@ function fetch_image($url) {
 		curl_setopt($c, CURLOPT_TIMEOUT, 10);
 
 		$image_data = curl_exec($c);
-		$mime_type  = curl_getinfo($c, CURLINFO_CONTENT_TYPE);
 
+		$status     = curl_getinfo($c, CURLINFO_HTTP_CODE);
+		$mime_type  = curl_getinfo($c, CURLINFO_CONTENT_TYPE);
 		$image_size = curl_getinfo($c, CURLINFO_SIZE_DOWNLOAD);
 
 		curl_close($c);
 	}
 
 	// TODO: fallback for non-cURL-enabled servers
+
+	if ( !in_array($status, array(200, 301, 302)) ) {
+		error('Invalid image.');
+	}
 
 	if ( $image_size > MAX_IMAGE_SIZE ) {
 		error('Image is too large.');
