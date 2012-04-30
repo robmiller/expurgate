@@ -2,6 +2,8 @@
 
 define('CACHE_DIR', dirname(__FILE__) . '/cache');
 
+define('MAX_AGE', 3600 * 24 * 7);
+
 // When you want to fetch an image and don't care where it comes from, use 
 // this. It'll fetch the image from the cache if it's cached, and from the 
 // remote server if not.
@@ -80,7 +82,6 @@ function get_image_from_cache($checksum) {
 
 	header('Content-Type: ' . $cache_entry->mime_type);
 	echo $image_data;
-	die;
 }
 
 // Fetches a remote image and stores it in the cache.
@@ -139,6 +140,35 @@ function purge_cache() {
 
 }
 
+// Removes expired entries from the cache.
+function purge_expired() {
+	$cache_files = get_cache_files();
+
+	array_walk(
+		$cache_files,
+		function($cache) {
+			if ( $cache->modified + MAX_AGE < time() ) {
+				unlink(CACHE_DIR . '/' . $cache->filename);
+			}
+		}
+	);
+}
+
+// Returns a list of all the cached files.
+function get_cache_files() {
+	$files = glob(CACHE_DIR . '/*.cache.txt');
+
+	$cache_files = array();
+	foreach ( (array) $files as $file ) {
+		$cache_files[] = (object) array(
+			'filename' => basename($file),
+			'modified' => filemtime($file)
+		);
+	}
+
+	return $cache_files;
+}
+
 function error($message) {
 	header('HTTP/1.0 404 Not Found');
 	header('Status: 404 Not Found');
@@ -159,3 +189,5 @@ if ( !$is_valid ) {
 }
 
 get_image($url);
+
+purge_expired();
